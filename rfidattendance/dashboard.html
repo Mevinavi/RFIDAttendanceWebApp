@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --sidebar-bg: #343a40;
+            --sidebar-color: #ffffff;
+            --sidebar-active-bg: #007bff;
+            --header-height: 56px;
+        }
+        
+        body {
+            overflow-x: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Sidebar styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-color);
+            transition: all 0.3s;
+            z-index: 1000;
+            padding-top: var(--header-height);
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.75rem 1.5rem;
+            margin: 0.1rem 0;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--sidebar-active-bg);
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar-header {
+            padding: 1.5rem 1.5rem 0.5rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        /* Main content area */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        /* Header styling */
+        .header {
+            height: var(--header-height);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .header-left {
+            width: var(--sidebar-width);
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-right {
+            flex-grow: 1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        
+        /* Toggle button for sidebar */
+        #sidebarToggle {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #495057;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+        
+        /* Cards styling */
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        
+        /* Attendance status badges */
+        .badge-present {
+            background-color: #28a745;
+        }
+        .badge-absent {
+            background-color: #dc3545;
+        }
+        .badge-late {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .badge-leave {
+            background-color: #17a2b8;
+        }
+        
+        /* Calendar styling */
+        .calendar-day {
+            border: 1px solid #dee2e6;
+            height: 120px;
+            overflow-y: auto;
+        }
+        .calendar-day-header {
+            background-color: #f8f9fa;
+            padding: 5px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .calendar-event {
+            font-size: 0.8rem;
+            padding: 2px 5px;
+            margin: 2px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            
+            .sidebar.active {
+                margin-left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .main-content.active {
+                margin-left: 250px;
+            }
+        }
+        
+        /* Breadcrumb styling */
+        .breadcrumb {
+            background: none;
+            padding: 0.75rem 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Search box */
+        .search-box {
+            position: relative;
+        }
+        .search-box input {
+            padding-left: 35px;
+        }
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button id="sidebarToggle" class="btn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="d-none d-md-inline">Attendance System</span>
+        </div>
+        <div class="header-right">
+            <div class="dropdown">
+                <button class="btn dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                    <i class="fas fa-user-circle me-1"></i>
+                    <span class="d-none d-md-inline">Admin User</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-menu">
+            <ul class="nav flex-column">
+                <li class="sidebar-header">Main</li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="sidebar-header">Attendance</li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Daily Attendance</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-history"></i>
+                        <span>Attendance History</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-file-export"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li class="sidebar-header">Management</li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-users"></i>
+                        <span>Employees</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-building"></i>
+                        <span>Departments</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Leave Management</span>
+                    </a>
+                </li>
+                <li class="sidebar-header">System</li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="#">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Attendance Dashboard</li>
+            </ol>
+        </nav>
+        
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Attendance Dashboard</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group me-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">Today</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">This Week</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">This Month</button>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="row">
+            <div class="col-md-3 mb-4">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <div class="card-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <h5 class="card-title">Present Today</h5>
+                        <h2 class="card-text">142</h2>
+                        <p class="card-text"><small>85% of employees</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <div class="card-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h5 class="card-title">On Time</h5>
+                        <h2 class="card-text">128</h2>
+                        <p class="card-text"><small>90% of present</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card text-white bg-warning">
+                    <div class="card-body">
+                        <div class="card-icon">
+                            <i class="fas fa-running"></i>
+                        </div>
+                        <h5 class="card-title">Late Arrivals</h5>
+                        <h2 class="card-text">14</h2>
+                        <p class="card-text"><small>10% of present</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card text-white bg-danger">
+                    <div class="card-body">
+                        <div class="card-icon">
+                            <i class="fas fa-user-times"></i>
+                        </div>
+                        <h5 class="card-title">Absent Today</h5>
+                        <h2 class="card-text">25</h2>
+                        <p class="card-text"><small>15% of employees</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Attendance Overview -->
+        <div class="row">
+            <div class="col-md-8 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Monthly Attendance Overview</h5>
+                        <select class="form-select form-select-sm" style="width: auto;">
+                            <option>June 2023</option>
+                            <option>May 2023</option>
+                            <option>April 2023</option>
+                        </select>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-placeholder" style="height: 300px;">
+                            <!-- Chart would go here (Chart.js, etc.) -->
+                            <p class="text-center text-muted py-5">Attendance chart would be displayed here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Today's Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6>Attendance Status</h6>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 85%">85% Present</div>
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: 15%">15% Absent</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>Punctuality</h6>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 90%">90% On Time</div>
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 10%">10% Late</div>
+                            </div>
+                        </div>
+                        <div>
+                            <h6>Leave Types</h6>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Sick Leave
+                                    <span class="badge bg-info rounded-pill">8</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Vacation
+                                    <span class="badge bg-info rounded-pill">5</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Personal Leave
+                                    <span class="badge bg-info rounded-pill">3</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Attendance and Calendar -->
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Recent Attendance</h5>
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" class="form-control form-control-sm" placeholder="Search employee...">
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Time In</th>
+                                        <th>Time Out</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>John Doe</td>
+                                        <td>IT</td>
+                                        <td>08:05 AM</td>
+                                        <td>05:15 PM</td>
+                                        <td><span class="badge badge-present">Present</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Jane Smith</td>
+                                        <td>HR</td>
+                                        <td>08:45 AM</td>
+                                        <td>05:30 PM</td>
+                                        <td><span class="badge badge-late">Late</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Robert Johnson</td>
+                                        <td>Finance</td>
+                                        <td>08:00 AM</td>
+                                        <td>05:00 PM</td>
+                                        <td><span class="badge badge-present">Present</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Emily Davis</td>
+                                        <td>Marketing</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td><span class="badge badge-absent">Absent</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Michael Wilson</td>
+                                        <td>Operations</td>
+                                        <td>08:10 AM</td>
+                                        <td>-</td>
+                                        <td><span class="badge badge-present">Present</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Attendance Calendar</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-chevron-left"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary">June 2023</button>
+                            <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col text-center p-1"><strong>Sun</strong></div>
+                            <div class="col text-center p-1"><strong>Mon</strong></div>
+                            <div class="col text-center p-1"><strong>Tue</strong></div>
+                            <div class="col text-center p-1"><strong>Wed</strong></div>
+                            <div class="col text-center p-1"><strong>Thu</strong></div>
+                            <div class="col text-center p-1"><strong>Fri</strong></div>
+                            <div class="col text-center p-1"><strong>Sat</strong></div>
+                        </div>
+                        <div class="row">
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">28</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">29</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">30</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">31</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">1</div>
+                                <div class="calendar-event bg-success text-white">95% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">2</div>
+                                <div class="calendar-event bg-success text-white">97% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">3</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">4</div>
+                                <div class="calendar-event bg-success text-white">92% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">5</div>
+                                <div class="calendar-event bg-success text-white">94% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">6</div>
+                                <div class="calendar-event bg-success text-white">96% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">7</div>
+                                <div class="calendar-event bg-success text-white">89% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">8</div>
+                                <div class="calendar-event bg-success text-white">91% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">9</div>
+                                <div class="calendar-event bg-success text-white">93% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">10</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">11</div>
+                                <div class="calendar-event bg-success text-white">90% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">12</div>
+                                <div class="calendar-event bg-danger text-white">Holiday</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">13</div>
+                                <div class="calendar-event bg-success text-white">88% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">14</div>
+                                <div class="calendar-event bg-success text-white">85% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">15</div>
+                                <div class="calendar-event bg-success text-white">85% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">16</div>
+                                <div class="calendar-event bg-success text-white">87% Present</div>
+                            </div>
+                            <div class="col calendar-day">
+                                <div class="calendar-day-header">17</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        // Toggle sidebar on mobile
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.main-content').classList.toggle('active');
+        });
+        
+        // Close sidebar when clicking outside on mobile
+        document.querySelector('.main-content').addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('active');
+                document.querySelector('.main-content').classList.remove('active');
+            }
+        });
+        
+        // Highlight active navigation item
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                navLinks.forEach(item => item.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Simulate loading (you can remove this in production)
+        setTimeout(() => {
+            document.querySelector('body').style.opacity = '1';
+        }, 100);
+    </script>
+</body>
+</html>
